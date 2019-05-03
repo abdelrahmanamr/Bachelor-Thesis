@@ -1,4 +1,4 @@
-﻿/* ========================================================================
+/* ========================================================================
  * Copyright (c) 2005-2019 The OPC Foundation, Inc. All rights reserved.
  *
  * OPC Foundation MIT License 1.00
@@ -195,7 +195,7 @@ namespace Quickstarts.FKHBserver
                 }
                 
                 // New Object to store names
-                FolderState NamesList = CreateFolderDesp(null, "NamesList", "NamesList", "Main Folder");
+                FolderState NamesList = CreateFolderDesp(null, "NamesList", "NamesList", "The Main Folder");
 
                 NamesList.AddReference(ReferenceTypeIds.Organizes, true, ObjectIds.ObjectsFolder);
                 references.Add(new NodeStateReference(ReferenceTypes.Organizes, false, NamesList.NodeId));
@@ -210,10 +210,14 @@ namespace Quickstarts.FKHBserver
                 rws = range.Rows.Count;
                 col = range.Columns.Count;
                 
-                for (r = 1; r <= col; r++)
-                    Headernames.Add((string)(range.Cells[r, 1] as Excel.Range).Value2);
+                for (j = 1; j <= col; j++)
+                    Headernames.Add((string)(range.Cells[1, j] as Excel.Range).Value2);
                 names = (string)(range.Cells[2, 1] as Excel.Range).Value2;
-                FolderState parentns = CreateFolderDesp(NamesList, names, names, "first name");
+                FolderState parentns = CreateFolderDesp(NamesList, names, names, "Youngest of all");
+                parentns.AddReference(ReferenceTypeIds.Organizes, true, ObjectIds.ObjectsFolder);
+                references.Add(new NodeStateReference(ReferenceTypes.Organizes, false, parentns.NodeId));
+                parentns.EventNotifier = EventNotifiers.SubscribeToEvents;
+
                 nslog.Add(names, parentns);
 
                 for (r = 2; r <= rws; r++)
@@ -225,9 +229,11 @@ namespace Quickstarts.FKHBserver
                         for (j = 2; j <= col; j++)
                         {
                             names = (string)(range.Cells[r, j] as Excel.Range).Value2;
-                            FolderState tempns;
-                            CreateSubFolder(out tempns, parentns, names, Headernames[j], externalReferences);
+                            FolderState tempns = CreateFolderDesp(parentns, names, names, Headernames[j-1]);
                             nslog.Add(names, tempns);
+                            /*FolderState tempns;
+                            CreateSubFolder(out tempns, parentns, names, Headernames[j-1], externalReferences);
+                            nslog.Add(names, tempns);*/
                         }
                     }
 
@@ -1482,17 +1488,17 @@ namespace Quickstarts.FKHBserver
             ///<summary>
             /// Creates the main folder with description
             /// </summary>
-            private FolderState CreateFolderDesp(NodeState parent, string path, string name, string place)
+            private FolderState CreateFolderDesp(NodeState parent, string path, string name, string description)
             {
                 FolderState folder = new FolderState(parent);
 
                 folder.SymbolicName = name;
-                folder.ReferenceTypeId = ReferenceTypes.HasChild;
+                folder.ReferenceTypeId = ReferenceTypes.Organizes;
                 folder.TypeDefinitionId = ObjectTypeIds.FolderType;
                 folder.NodeId = new NodeId(path, NamespaceIndex);
                 folder.BrowseName = new QualifiedName(path, NamespaceIndex);
                 folder.DisplayName = new LocalizedText("en", name);
-                folder.Description = place;
+                folder.Description = new LocalizedText(description);
                 folder.WriteMask = AttributeWriteMask.None;
                 folder.UserWriteMask = AttributeWriteMask.None;
                 folder.EventNotifier = EventNotifiers.None;
@@ -1501,8 +1507,9 @@ namespace Quickstarts.FKHBserver
                 {
                     parent.AddChild(folder);
                 }
+            AddPredefinedNode(SystemContext, folder);
 
-                return folder;
+            return folder;
             }
             private void CreateSubFolder(out FolderState folder, NodeState parent, string qualifiedName, string description, IDictionary<NodeId, IList<IReference>> externalReferences = null)
             {
@@ -1513,7 +1520,7 @@ namespace Quickstarts.FKHBserver
                 folder.DisplayName = folder.BrowseName.Name;
                 folder.Description = description;
                 folder.TypeDefinitionId = ObjectTypeIds.BaseObjectType;
-                folder.ReferenceTypeId = ReferenceTypeIds.HasChild;
+                folder.ReferenceTypeId = ReferenceTypeIds.Organizes;
 
                 if (externalReferences != null)
                 {
@@ -1526,7 +1533,7 @@ namespace Quickstarts.FKHBserver
                 }
                 else
                     parent.AddChild(folder);
-
+                //parent.AddChild(folder);
                 AddPredefinedNode(SystemContext, folder);
             }
             /// <summary>
